@@ -11,12 +11,37 @@ server_socket.bind(server_address)
 
 print('Servidor pronto para receber mensagens.')
 
+expected_sequence_number = 0
+received_messages = []
+
 while True:
-    print('Esperando por clientes...')
     # Aguarda a chegada de uma mensagem
     data, address = server_socket.recvfrom(1024)
-    print('Mensagem recebida do cliente:', data.decode())
+    message = data.decode()
 
-    # Envia uma resposta para o cliente
-    response = 'Olá, cliente!'
-    server_socket.sendto(response.encode(), address)
+    if message == 'FIM':
+        # Recebido o sinal de encerramento do cliente
+        break
+
+    # Separa o número de sequência da mensagem
+    message_parts = message.split(':')
+    message_number = int(message_parts[1])
+    message_content = message_parts[2]
+
+    # Armazena a mensagem recebida
+    received_messages.append((message_number, message_content))
+
+# Ordena as mensagens com base no message_number
+received_messages.sort(key=lambda x: x[0])
+
+# Imprime as mensagens em ordem
+for message_number, message_content in received_messages:
+    print('Recebido:', message_number, message_content)
+
+# Envia uma resposta de confirmação para o cliente
+response = 'FIM'
+server_socket.sendto(response.encode(), address)
+print('Enviado: FIM')
+
+# Fecha o socket do servidor
+server_socket.close()
