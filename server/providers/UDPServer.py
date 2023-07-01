@@ -10,13 +10,16 @@ class UDPServer:
 
         self.socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
         self.socket.bind((self.local_ip, self.local_port))
+        self.socket.setblocking(0)
         print("Servidor UDP up e escutando...")
 
     def listen(self):
         while True:
-            request = self.receive_request()
-            print("Mensagem do Cliente: {}".format(request))
-
+            try: 
+                request = self.receive_request()
+                print("Mensagem do Cliente: {}".format(request))
+            except BlockingIOError: 
+                continue
             # Processamento (ou só salvar pacote no buffer...)
             
             # Enviar response (ACK)
@@ -30,7 +33,7 @@ class UDPServer:
         request = json.loads(request_decoded)
 
         return request
-    
+            
     def response(self, body: dict):
         response_body = json.dumps(body)
         response_body_encoded = str.encode(response_body)
