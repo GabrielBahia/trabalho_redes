@@ -12,12 +12,17 @@ class UDPClient:
         self.buffer_size = buffer_size
         self.socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
         self.socket.setblocking(0)
+        self.next_sequence_number = 0
+        self.sent_packages = {}
 
     def send_package(self, package: Package) -> None:
         package_dump = package.to_json_str()
         package_encoded = str.encode(package_dump)
 
         self.socket.sendto(package_encoded, (self.server_address, self.server_port))
+
+        self.sent_packages[package.sequence_number] = package
+        self.next_sequence_number += 1
     
     def receive(self):
         response_encoded, address = self.socket.recvfrom(self.buffer_size)
@@ -34,6 +39,10 @@ class UDPClient:
             # Recebe responses (ACKs)
             try:
                 response = self.receive()
+
+                ack_number = response['sequence_number']
+                if ack_number in self.sent_packages:
+                    del self.sent_packages[ack_number]
             except BlockingIOError:
                 continue
             # Reajusta a janela de acordo com os ACKs recebidos
