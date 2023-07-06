@@ -1,26 +1,15 @@
 import json
+from sys import getsizeof
 
 
 class Package:
-    def __init__(self) -> None:
-        self._sequence_number = 0
-        self._body = {}
-
-    @property
-    def body(self):
-        return self._body
-    
-    @body.setter
-    def body(self, value):
-        self._body = value
-
-    @property
-    def sequence_number(self):
-        return self._sequence_number
-    
-    @sequence_number.setter
-    def sequence_number(self, value):
-        self._sequence_number = value
+    def __init__(self, sequence_number=None, body=None) -> None:
+        self.sequence_number = sequence_number
+        self.body = body
 
     def to_json_str(self) -> str:
         return json.dumps(self, default=lambda obj: obj.__dict__)
+    
+    @classmethod
+    def empty_package_size(cls) -> int:
+        return getsizeof(str.encode(cls().to_json_str()))

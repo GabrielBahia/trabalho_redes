@@ -1,5 +1,10 @@
 import socket
 import json
+from sys import path
+path.append('..')
+
+from trabalho_redes.entities.Package import Package
+# from entities.Package import Package
 
 
 class UDPServer:
@@ -14,26 +19,26 @@ class UDPServer:
         print("Servidor UDP up e escutando...")
 
     def listen(self):
-
         expected_sequence_number = 0
         received_data = []
 
         while True:
             try: 
                 request = self.receive_request()
-                print("Mensagem do Cliente: {}".format(request))
+                print(f'Mensagem do Cliente: {request.__dict__}')
+
                 # Verificar se o pacote recebido é o esperado
-                if request["sequence_number"] == expected_sequence_number:
+                if request.sequence_number == expected_sequence_number:
                     # Processamento (ou só salvar pacote no buffer)
-                    received_data.append(request["body"])
+                    received_data.append(request.body)
                     # Incrementa número de sequência esperado
                     expected_sequence_number += 1
                     # Enviar response (ACK)
-                    self.reply_with_ack(self, expected_sequence_number)
+                    self.reply_with_ack(expected_sequence_number)
                     continue
                 else:
                     # Enviar response (ACK) com número anterior (indica que o pacote foi recebido, mas não é o esperado)
-                    self.reply_with_ack(self, expected_sequence_number)
+                    self.reply_with_ack(expected_sequence_number)
                     continue
 
             except BlockingIOError: 
@@ -41,18 +46,21 @@ class UDPServer:
 
     def reply_with_ack(self, sequence_number):
         # Monta o pacote de resposta, no caso, converte ACK para string e depois para bytes
-        package_encoded = (json.dumps({"sequence_number": sequence_number})).encode()
+        package = Package(sequence_number)
+        package_encoded = str.encode(package.to_json_str())
+
         # Envia o pacote de resposta
         self.socket.sendto(package_encoded, self.client_address)
 
-    def receive_request(self):
+    def receive_request(self) -> Package:
         request_encoded, address = self.socket.recvfrom(self.buffer_size)
         self.client_address = address
 
         request_decoded = request_encoded.decode()
         request = json.loads(request_decoded)
+        package = Package(**request)
 
-        return request
+        return package
 
     def response(self, body: dict):
         response_body = json.dumps(body)
