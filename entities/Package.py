@@ -13,3 +13,7 @@ class Package:
     @classmethod
     def empty_package_size(cls) -> int:
         return getsizeof(str.encode(cls().to_json_str()))
+
+    @classmethod
+    def empty_package_length(cls) -> int:
+        return len(cls().to_json_str())

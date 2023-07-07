@@ -45,13 +45,17 @@ class UDPClient:
         return package
 
     def send_file(self, file: str):
-        while True:
-            # Envia pacotes dentro da janela e verifica timeout dos pacotes
-            
-            #chunk = self.get_file_chunk(file)
-            
-            # package = Package(self.next_sequence_number)
-            # self.send_package(package)
+        file_chunk_generator = self.get_file_chunk_generator(file)
+        end_of_file = False
+
+        while not end_of_file:
+            try:
+                # Envia pacotes dentro da janela e verifica timeout dos pacotes
+                file_chunk = next(file_chunk_generator)
+                package = Package(self.next_sequence_number, file_chunk)
+                self.send_package(package)
+            except StopIteration:
+                end_of_file = True
 
             try:
                 # Recebe responses (ACKs)
@@ -68,14 +72,14 @@ class UDPClient:
                 continue
 
     @staticmethod
-    def get_file_chunk(file: str) -> str:
+    def get_file_chunk_generator(file: str):
         max_package_size = 1024
-        empty_package_size = Package.empty_package_size()
-        body_size = max_package_size - empty_package_size
-        file_size = getsizeof(file)
-        chunks_amount = ceil(file_size / body_size)
+        base_char_size = getsizeof(str.encode(' '))
+        max_package_length = max_package_size - base_char_size
+        body_length = max_package_length - Package.empty_package_length()
+        chunks_amount = ceil(len(file) / body_length)
 
         for chunk_index in range(chunks_amount):
-            start_index = chunk_index * body_size
-            stop_index = (chunk_index + 1) * body_size
+            start_index = chunk_index * body_length
+            stop_index = (chunk_index + 1) * body_length
             yield file[start_index:stop_index]
