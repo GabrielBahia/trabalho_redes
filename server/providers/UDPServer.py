@@ -11,8 +11,8 @@ class UDPServer:
         self.local_ip = local_ip
         self.local_port = local_port
         self.buffer_size = buffer_size
-        self.window = 10
-        self.received_data = PriorityQueue(self.window)
+        self.window_size = 10
+        self.packages_buffer = PriorityQueue(self.window_size)
 
         self.socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
         self.socket.bind((self.local_ip, self.local_port))
@@ -21,35 +21,41 @@ class UDPServer:
 
     def listen(self):
         expected_sequence_number = 0
-        #received_data = []
 
         while True:
             try:
-                #if(self.received_data.qsize()) 
-                if self.received_data.qsize() == self.window: 
+                # DropTail (descarta novos pacotes)
+                if self.packages_buffer.qsize() == self.window_size: 
                     continue
 
+
                 request = self.receive_request()
-                #print(f'Mensagem do Cliente: {request.__dict__}')
+
+                # Simulação de perda de pacote(10% de chance)
+                if random.random() <= 0.1:
+                   continue
 
                 if request.fyn:
-                    while not self.received_data.empty(): 
-                        yield self.received_data.get()
+                    while not self.packages_buffer.empty(): 
+                        yield self.packages_buffer.get()[1]
                     yield Package(fyn=True)
                     break
 
                 # Verificar se o pacote recebido é o esperado
                 if request.sequence_number == expected_sequence_number:
                     # Processamento (ou só salvar pacote no buffer) // Fila de prioridade
-                    self.received_data.put((request.sequence_number, request.body))
-                    # Incrementa número de sequência esperado
-                    expected_sequence_number += 1
+                    self.packages_buffer.put((request.sequence_number, request))
+
                     # Enviar response (ACK)
                     self.reply_with_ack(expected_sequence_number)
+                    
+                    # Incrementa número de sequência esperado
+                    expected_sequence_number += 1
 
+                    # Simulação de consumo da aplicação(30% de chance)
                     if random.random() <= 0.3:
-                        if not self.received_data.empty():
-                            yield self.received_data.get()
+                        if not self.packages_buffer.empty():
+                            yield self.packages_buffer.get()[1]
 
                     continue
                 else:
@@ -61,7 +67,7 @@ class UDPServer:
 
     def reply_with_ack(self, sequence_number):
         # Monta o pacote de resposta, no caso, converte ACK para string e depois para bytes
-        package = Package(sequence_number)
+        package = Package(sequence_number, rwnd=self.packages_buffer.qsize())
         package_encoded = str.encode(package.to_json_str())
 
         # Envia o pacote de resposta
