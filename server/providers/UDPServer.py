@@ -1,10 +1,7 @@
 import socket
 import json
-from sys import path
-path.append('..')
 
-from trabalho_redes.entities.Package import Package
-# from entities.Package import Package
+from Package import Package
 
 
 class UDPServer:
