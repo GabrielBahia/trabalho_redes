@@ -2,11 +2,8 @@ import socket
 import json
 import random
 from queue import PriorityQueue
-from sys import path
-path.append('..')
 
-from trabalho_redes.entities.Package import Package
-# from entities.Package import Package
+from Package import Package
 
 
 class UDPServer:
@@ -35,6 +32,12 @@ class UDPServer:
                 request = self.receive_request()
                 #print(f'Mensagem do Cliente: {request.__dict__}')
 
+                if request.fyn:
+                    while not self.received_data.empty(): 
+                        yield self.received_data.get()
+                    yield Package(fyn=True)
+                    break
+
                 # Verificar se o pacote recebido é o esperado
                 if request.sequence_number == expected_sequence_number:
                     # Processamento (ou só salvar pacote no buffer) // Fila de prioridade
@@ -46,8 +49,7 @@ class UDPServer:
 
                     if random.random() <= 0.3:
                         if not self.received_data.empty():
-                            yield self.received_data
-                            self.received_data.queue.clear()
+                            yield self.received_data.get()
 
                     continue
                 else:

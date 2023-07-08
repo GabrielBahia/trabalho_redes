@@ -1,11 +1,9 @@
 import socket
 import json
 from math import ceil
-from sys import path, getsizeof
-path.append('..')
+from sys import getsizeof
 
-from trabalho_redes.entities.Package import Package
-# from entities.Package import Package
+from Package import Package
 
 
 class UDPClient:
@@ -55,6 +53,7 @@ class UDPClient:
                 package = Package(self.next_sequence_number, file_chunk)
                 self.send_package(package)
             except StopIteration:
+                # self.send_package(Package(fyn=True))
                 end_of_file = True
 
             try:

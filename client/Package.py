@@ -3,9 +3,10 @@ from sys import getsizeof
 
 
 class Package:
-    def __init__(self, sequence_number=None, body=None) -> None:
+    def __init__(self, sequence_number=None, body=None, fyn=False) -> None:
         self.sequence_number = sequence_number
         self.body = body
+        self.fyn = fyn
 
     def to_json_str(self) -> str:
         return json.dumps(self, default=lambda obj: obj.__dict__)
