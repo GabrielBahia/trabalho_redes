@@ -32,7 +32,7 @@ class UDPServer:
 
                 # Simulação de perda de pacote(10% de chance)
                 if random.random() <= 0.1:
-                   continue
+                    continue
 
                 if request.fyn:
                     while not self.packages_buffer.empty(): 
