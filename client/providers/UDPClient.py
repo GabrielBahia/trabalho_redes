@@ -53,6 +53,7 @@ class UDPClient:
                 package = Package(self.next_sequence_number, file_chunk)
                 self.send_package(package)
             except StopIteration:
+                # self.send_package(Package(fyn=True))
                 end_of_file = True
 
             try:

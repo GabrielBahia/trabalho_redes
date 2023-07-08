@@ -24,10 +24,17 @@ class UDPServer:
                 request = self.receive_request()
                 print(f'Mensagem do Cliente: {request.__dict__}')
 
+                if request.fyn:
+                    yield Package(fyn=True)
+                    break
+
                 # Verificar se o pacote recebido é o esperado
                 if request.sequence_number == expected_sequence_number:
                     # Processamento (ou só salvar pacote no buffer)
                     received_data.append(request.body)
+
+                    yield request
+                        
                     # Incrementa número de sequência esperado
                     expected_sequence_number += 1
                     # Enviar response (ACK)
