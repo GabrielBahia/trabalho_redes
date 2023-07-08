@@ -28,7 +28,6 @@ class UDPServer:
                 if self.packages_buffer.qsize() == self.window_size: 
                     continue
 
-
                 request = self.receive_request()
 
                 # Simulação de perda de pacote(10% de chance)
