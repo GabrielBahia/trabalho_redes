@@ -2,6 +2,7 @@ import socket
 import json
 from math import ceil
 from sys import getsizeof
+from queue import PriorityQueue
 
 from Package import Package
 
@@ -12,10 +13,13 @@ class UDPClient:
         self.server_port = server_port
         self.buffer_size = buffer_size
         self.window_size = 10
+        self.window_start = 0
         self.next_sequence_number = 0
         self.sent_packages = {}
+        self.package_buffer = PriorityQueue(self.window_size)
 
-        self.socket = socket.socket(family=socket.AF_INET, type=socket.SOCK_DGRAM)
+        self.socket = socket.socket(
+            family=socket.AF_INET, type=socket.SOCK_DGRAM)
         self.socket.setblocking(0)
 
     @property
@@ -23,15 +27,21 @@ class UDPClient:
         return self.window_size * 2 - 1
 
     def send_package(self, package: Package) -> None:
+        # Gera pacote encodado
         package_dump = package.to_json_str()
         package_encoded = str.encode(package_dump)
 
-        self.socket.sendto(package_encoded, (self.server_address, self.server_port))
+        # Envia pacote e adiciona na lista de pacotes enviados
+        self.socket.sendto(
+            package_encoded, (self.server_address, self.server_port))
 
         self.sent_packages[package.sequence_number] = package
 
+        # Incrementa o número de sequência
         self.next_sequence_number += 1
-        if self.next_sequence_number > self.max_sequence_number:
+
+        # Verifica se o número de sequência é válido e zera se necessário
+        if (self.next_sequence_number > self.max_sequence_number):
             self.next_sequence_number = 0
     
     def receive(self) -> Package:
@@ -51,24 +61,48 @@ class UDPClient:
                 # Envia pacotes dentro da janela e verifica timeout dos pacotes
                 file_chunk = next(file_chunk_generator)
                 package = Package(self.next_sequence_number, file_chunk)
-                self.send_package(package)
+
+                # Verifica se pode enviar pacote (ainda há espaço na janela)
+                if ((self.next_sequence_number - self.window_start) < self.window_size):
+                    # Envia pacote se ainda for possível
+                    print(f"if do send file do client {self.next_sequence_number}")
+                    self.send_package(package)
+                else:
+                    # Verifica timeout dos pacotes
+                    while (self.next_sequence_number - self.window_start >= self.window_size):
+                        print("while do send file do client")
+                        # Espera resposta
+                        self.receive_acks()
+
             except StopIteration:
                 # self.send_package(Package(fyn=True))
                 end_of_file = True
 
+
             try:
                 # Recebe responses (ACKs)
-                response = self.receive()
-                print(f'response: {response.__dict__}')
+                self.receive_acks()
 
-                ack_number = response.sequence_number
-                if ack_number in self.sent_packages:
-                    del self.sent_packages[ack_number]
-
-                    # Reajusta a janela de acordo com os ACKs recebidos
-            
             except BlockingIOError:
+                print("except do blocking io")
                 continue
+
+    def receive_acks(self):
+        # Espera resposta e pega número de ACK
+        response = self.receive()
+        received_ack_number = response.sequence_number
+
+        # Verifica se o ACK recebido é válido
+        if received_ack_number in self.sent_packages:
+            # Checa se o pacote foi enviado e apaga
+            del self.sent_packages[received_ack_number]
+
+            # Reajusta a janela de acordo com o número de ACKs recebidos
+            if (received_ack_number == self.window_start):
+                print("if do receive ack do client")
+                while ((self.next_sequence_number - self.window_start) >= self.window_size):
+                    print("while do receive ack do client")
+                    self.window_start += 1
 
     @staticmethod
     def get_file_chunk_generator(file: str):
