@@ -66,7 +66,8 @@ class UDPServer:
 
     def reply_with_ack(self, sequence_number):
         # Monta o pacote de resposta, no caso, converte ACK para string e depois para bytes
-        package = Package(sequence_number, rwnd=self.packages_buffer.qsize())
+        rwnd = self.window_size - self.packages_buffer.qsize()
+        package = Package(sequence_number, rwnd=rwnd)
         package_encoded = str.encode(package.to_json_str())
 
         # Envia o pacote de resposta

@@ -18,6 +18,8 @@ class UDPClient:
         self.sent_packages = {}
         self.package_buffer = PriorityQueue(self.window_size)
 
+        self.rwnd_size_server = 10
+
         self.socket = socket.socket(
             family=socket.AF_INET, type=socket.SOCK_DGRAM)
         self.socket.setblocking(0)
@@ -62,8 +64,10 @@ class UDPClient:
                 file_chunk = next(file_chunk_generator)
                 package = Package(self.next_sequence_number, file_chunk)
 
+                    
+                print(f"espaco livre do buffer do server {self.rwnd_size_server }")
                 # Verifica se pode enviar pacote (ainda há espaço na janela)
-                if ((self.next_sequence_number - self.window_start) < self.window_size):
+                if ((self.next_sequence_number - self.window_start) < self.window_size and self.rwnd_size_server > 0 ):
                     # Envia pacote se ainda for possível
                     print(f"if do send file do client {self.next_sequence_number}")
                     self.send_package(package)
@@ -91,6 +95,8 @@ class UDPClient:
         # Espera resposta e pega número de ACK
         response = self.receive()
         received_ack_number = response.sequence_number
+
+        self.rwnd_size_server = response.rwnd
 
         # Verifica se o ACK recebido é válido
         if received_ack_number in self.sent_packages:
