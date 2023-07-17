@@ -54,12 +54,15 @@ class UDPClient:
         print(f"Tempo decorrido: {elapsed_time:.2f} nanosegundos")
 
     def receive(self) -> Package:
-        response_encoded, address = self.socket.recvfrom(self.buffer_size)
-        response_decoded = response_encoded.decode()
-        response = json.loads(response_decoded)
-        package = Package(**response)
+        try:
+            response_encoded, address = self.socket.recvfrom(self.buffer_size)
+            response_decoded = response_encoded.decode()
+            response = json.loads(response_decoded)
+            package = Package(**response)
 
-        return package
+            return package
+        except BlockingIOError:
+            return None
 
     def send_file(self, file: str):
         file_chunk_generator = self.get_file_chunk_generator(file)
@@ -99,22 +102,23 @@ class UDPClient:
     def receive_acks(self):
         # Espera resposta e pega número de ACK
         response = self.receive()
-        received_ack_number = response.sequence_number
+        if (response):
+            received_ack_number = response.sequence_number
 
-        self.rwnd_size_server = response.rwnd
+            self.rwnd_size_server = response.rwnd
 
-        # Verifica se o ACK recebido é válido
-        if received_ack_number in self.sent_packages:
-            # Checa se o pacote foi enviado e apaga
-            del self.sent_packages[received_ack_number]
+            # Verifica se o ACK recebido é válido
+            if received_ack_number in self.sent_packages:
+                # Checa se o pacote foi enviado e apaga
+                del self.sent_packages[received_ack_number]
 
-            # Reajusta a janela de acordo com o número de ACKs recebidos
-            if (received_ack_number == self.window_start):
-                # print("if do receive ack do client")
-                while ((self.next_sequence_number - self.window_start) >= self.window_size):
-                    # print("while do receive ack do client")
-                    self.window_start += 1
-        self.show_timer()
+                # Reajusta a janela de acordo com o número de ACKs recebidos
+                if (received_ack_number == self.window_start):
+                    # print("if do receive ack do client")
+                    while ((self.next_sequence_number - self.window_start) >= self.window_size):
+                        # print("while do receive ack do client")
+                        self.window_start += 1
+            self.show_timer()
 
     @staticmethod
     def get_file_chunk_generator(file: str):
