@@ -85,7 +85,7 @@ class UDPClient:
                         self.receive_acks()
 
             except StopIteration:
-                # self.send_package(Package(fyn=True))
+                self.send_package(Package(fyn=True))
                 end_of_file = True
 
             try:
