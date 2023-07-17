@@ -3,7 +3,7 @@ import json
 from math import ceil
 from sys import getsizeof
 from queue import PriorityQueue
-
+import time
 from Package import Package
 
 
@@ -19,6 +19,8 @@ class UDPClient:
         self.package_buffer = PriorityQueue(self.window_size)
 
         self.rwnd_size_server = 10
+
+        self.start_time = time.perf_counter_ns()
 
         self.socket = socket.socket(
             family=socket.AF_INET, type=socket.SOCK_DGRAM)
@@ -45,7 +47,12 @@ class UDPClient:
         # Verifica se o número de sequência é válido e zera se necessário
         if (self.next_sequence_number > self.max_sequence_number):
             self.next_sequence_number = 0
-    
+
+    def show_timer(self):
+        current_time = time.perf_counter_ns()
+        elapsed_time = current_time - self.start_time
+        print(f"Tempo decorrido: {elapsed_time:.2f} nanosegundos")
+
     def receive(self) -> Package:
         response_encoded, address = self.socket.recvfrom(self.buffer_size)
         response_decoded = response_encoded.decode()
@@ -64,17 +71,16 @@ class UDPClient:
                 file_chunk = next(file_chunk_generator)
                 package = Package(self.next_sequence_number, file_chunk)
 
-                    
-                print(f"espaco livre do buffer do server {self.rwnd_size_server }")
+                # print(f"espaco livre do buffer do server {self.rwnd_size_server }")
                 # Verifica se pode enviar pacote (ainda há espaço na janela)
-                if ((self.next_sequence_number - self.window_start) < self.window_size and self.rwnd_size_server > 0 ):
+                if ((self.next_sequence_number - self.window_start) < self.window_size and self.rwnd_size_server > 0):
                     # Envia pacote se ainda for possível
-                    print(f"if do send file do client {self.next_sequence_number}")
+                    # print(f"if do send file do client {self.next_sequence_number}")
                     self.send_package(package)
                 else:
                     # Verifica timeout dos pacotes
                     while (self.next_sequence_number - self.window_start >= self.window_size):
-                        print("while do send file do client")
+                        # print("while do send file do client")
                         # Espera resposta
                         self.receive_acks()
 
@@ -82,13 +88,12 @@ class UDPClient:
                 # self.send_package(Package(fyn=True))
                 end_of_file = True
 
-
             try:
                 # Recebe responses (ACKs)
                 self.receive_acks()
 
             except BlockingIOError:
-                print("except do blocking io")
+                # print("except do blocking io")
                 continue
 
     def receive_acks(self):
@@ -105,10 +110,11 @@ class UDPClient:
 
             # Reajusta a janela de acordo com o número de ACKs recebidos
             if (received_ack_number == self.window_start):
-                print("if do receive ack do client")
+                # print("if do receive ack do client")
                 while ((self.next_sequence_number - self.window_start) >= self.window_size):
-                    print("while do receive ack do client")
+                    # print("while do receive ack do client")
                     self.window_start += 1
+        self.show_timer()
 
     @staticmethod
     def get_file_chunk_generator(file: str):
