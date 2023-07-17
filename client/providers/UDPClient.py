@@ -76,14 +76,13 @@ class UDPClient:
 
                 # print(f"espaco livre do buffer do server {self.rwnd_size_server }")
                 # Verifica se pode enviar pacote (ainda há espaço na janela)
-                if ((self.next_sequence_number - self.window_start) < self.window_size and self.rwnd_size_server > 0):
+                if (((self.next_sequence_number - self.window_start) < self.window_size) and (self.rwnd_size_server > 0)):
                     # Envia pacote se ainda for possível
                     # print(f"if do send file do client {self.next_sequence_number}")
                     self.send_package(package)
                 else:
                     # Verifica timeout dos pacotes
                     while (self.next_sequence_number - self.window_start >= self.window_size):
-                        # print("while do send file do client")
                         # Espera resposta
                         self.receive_acks()
 
@@ -113,11 +112,11 @@ class UDPClient:
                 del self.sent_packages[received_ack_number]
 
                 # Reajusta a janela de acordo com o número de ACKs recebidos
-                if (received_ack_number == self.window_start):
-                    # print("if do receive ack do client")
-                    while ((self.next_sequence_number - self.window_start) >= self.window_size):
-                        # print("while do receive ack do client")
-                        self.window_start += 1
+                # if (received_ack_number == self.window_start):
+
+                while ((self.next_sequence_number - self.window_start) >= self.window_size):
+                    # print("while do receive ack do client")
+                    self.window_start += 1
             self.show_timer()
 
     @staticmethod
